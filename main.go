@@ -4,28 +4,21 @@ import (
 	"fmt"
 )
 
-// Variable types
-/*
-	- int: 32-bit signed integer
-	- float32: 32-bit floating point
-	- string: text
-	- bool: true or false
-*/
-
-// Declaring
-/*
-	- var <name> <type> = <value>
-		var student1 string = "John" //type is string
-  	var student2 = "Jane" //type is inferred
-  	X := 2 //type is inferred
-*/
-
 func main() {
-	var fullname = "Do Ngoc Giang"
-	var age int
-	age = 21
-	address := "Hanoi"
-	fmt.Println("Hello, ", fullname)
-	fmt.Println(age)
-	fmt.Println(address)
+	var a, b, c, d int = 1, 3, 5, 7
+
+	var (
+		x int
+		y int = 1
+		z string = "hello"
+	)
+
+  fmt.Println(a)
+  fmt.Println(b)
+  fmt.Println(c)
+  fmt.Println(d)
+
+  fmt.Println(x)
+  fmt.Println(y)
+  fmt.Println(z)
 }
