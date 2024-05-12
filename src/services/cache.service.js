@@ -1,11 +1,13 @@
 const NodeCache = require('node-cache');
 
+const { TIME_CACHE_DEFAULT } = require('../constants');
+
 class CacheService {
   constructor() {
     this.cache = new NodeCache();
   }
 
-  set(key, value, ttl = 60) {
+  set(key, value, ttl = TIME_CACHE_DEFAULT) {
     this.cache.set(key, value, ttl);
   }
 

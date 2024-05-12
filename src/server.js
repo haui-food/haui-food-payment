@@ -1,9 +1,36 @@
+const cron = require('node-cron');
 const express = require('express');
 const mongoose = require('mongoose');
 
 const env = require('./config');
+const { loginTPBank, getTransactionHistory } = require('./services/tp-bank.service');
 
 const app = express();
+
+const scheduledTasks = [
+  { task: loginTPBank, schedule: '*/30 * * * * *' },
+  { task: getTransactionHistory, schedule: '*/5 * * * * *' },
+];
+
+mongoose.set('debug', true);
+
+app.get('/login', async (req, res) => {
+  try {
+    const accessToken = await loginTPBank();
+    res.send({ accessToken });
+  } catch (error) {
+    res.send({ error: error.message });
+  }
+});
+
+app.get('/histories', async (req, res) => {
+  try {
+    const histories = await getTransactionHistory(req.query.accessToken);
+    res.send({ histories });
+  } catch (error) {
+    res.send({ error: error.message });
+  }
+});
 
 app.all('*', (req, res) => {
   res.send('Service payment is running 🌱');
@@ -17,5 +44,10 @@ mongoose
   .then(() => {
     app.listen(env.port, () => {
       console.log(`Server running on port ${env.port}`);
+    });
+  })
+  .then(() => {
+    scheduledTasks.forEach(({ task, schedule }) => {
+      cron.schedule(schedule, task, { scheduled: true, timezone: 'Asia/Ho_Chi_Minh' });
     });
   });
