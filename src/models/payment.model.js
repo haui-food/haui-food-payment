@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const paymentSchema = mongoose.Schema(
   {
+    transactionId: {
+      type: String,
+    },
     description: {
       type: String,
     },
