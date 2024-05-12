@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "./src/server.js",
   "scripts": {
-    "format": "prettier --write 'src/**/*.{js,json}'"
+    "format": "prettier --write 'src/**/*.{js,json}'",
+    "start": "nodemon ./src/server.js",
+    "pro": "node ./src/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +15,7 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
+    "nodemon": "^3.1.0",
     "prettier": "^3.2.5"
   }
 }
