@@ -7,10 +7,7 @@ const { loginTPBank, getTransactionHistory } = require('./services/tp-bank.servi
 
 const app = express();
 
-const scheduledTasks = [
-  { task: loginTPBank, schedule: '*/30 * * * * *' },
-  { task: getTransactionHistory, schedule: '*/5 * * * * *' },
-];
+const scheduledTasks = [{ task: getTransactionHistory, schedule: '*/10 * * * * *' }];
 
 mongoose.set('debug', true);
 
