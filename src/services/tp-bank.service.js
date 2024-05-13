@@ -1,20 +1,32 @@
 const axios = require('axios');
 
-const { Order, Payment } = require('../models');
+const { User, Payment } = require('../models');
 const cacheService = require('./cache.service');
 const cryptoService = require('./crypto.service');
 const { usernameHash, passwordHash, accountNo } = require('../config');
 const {
-  KEY_TOTAL_BALANCE,
   KEY_ACCESS_TOKEN,
+  KEY_TOTAL_BALANCE,
+  KEY_LIST_PAYMENTS,
   ONE_DAY_IN_SECONDS,
   DATE_NUMBER_DIFFERENCE,
-  KEY_LIST_PAYMENTS,
+  TIME_CACHE_LIST_PAYMENTS,
 } = require('../constants');
 
 const username = cryptoService.decrypt(usernameHash);
 const password = cryptoService.decrypt(passwordHash);
-const deviceId = 'VAfU3uJVRqt1xWjsFRQ2S2NOkjrTC5AV3D2qdywFSPmBz';
+
+const makeDeviceId = (t) => {
+  let e = '',
+    n = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+    o = n.length;
+  for (let i = 0; i < t; i++) e += n.charAt(Math.floor(Math.random() * o));
+  return e;
+};
+
+const getDeviceId = () => makeDeviceId(45);
+
+const deviceId = getDeviceId();
 
 const getRandomNumber = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -55,6 +67,31 @@ const getTotalBalanceOld = async () => {
   }
 
   return 0;
+};
+
+const extractDynamicValue = (desc) => {
+  const extractionRules = [
+    {
+      condition: (str) => str.includes(';'),
+      extractor: (str) => str.split(';')[2],
+    },
+    {
+      condition: (str) => str.includes('Thanh toan QR'),
+      extractor: (str) => str.split(' ')[3],
+    },
+    {
+      condition: (str) => str.includes('MBVCB'),
+      extractor: (str) => str.split('.')[3],
+    },
+  ];
+
+  for (const rule of extractionRules) {
+    if (rule.condition(desc)) {
+      return rule.extractor(desc);
+    }
+  }
+
+  return desc;
 };
 
 const loginTPBank = async () => {
@@ -122,13 +159,12 @@ const getTransactionHistory = async () => {
   const toDate = adjustCurrentDate(DATE_NUMBER_DIFFERENCE);
   const fromDate = adjustCurrentDate(-DATE_NUMBER_DIFFERENCE);
 
-  let accessToken = (await cacheService.get(KEY_ACCESS_TOKEN)) || '';
-
-  if (!accessToken || accessToken === '') {
+  let accessToken = await cacheService.get(KEY_ACCESS_TOKEN);
+  if (!accessToken) {
     accessToken = await loginTPBank();
   }
 
-  const data = JSON.stringify({
+  const requestData = {
     pageNumber: 1,
     pageSize: 400,
     accountNo,
@@ -137,7 +173,7 @@ const getTransactionHistory = async () => {
     toDate,
     fromDate,
     keyword: '',
-  });
+  };
 
   const config = {
     method: 'post',
@@ -167,26 +203,26 @@ const getTransactionHistory = async () => {
       'sec-ch-ua-mobile': '?0',
       'sec-ch-ua-platform': '"Windows"',
     },
-    data: data,
+    data: JSON.stringify(requestData),
   };
 
   try {
     console.log('Get money');
     const response = await axios(config);
-    const { status, data } = response;
+    const { status, data: responseData } = response;
 
     if (status === 200) {
-      const { transactionInfos } = data;
+      const { transactionInfos } = responseData;
 
       const listIds = transactionInfos.map((transactionInfo) => transactionInfo.id);
 
       let paymentsExistIds = cacheService.get(KEY_LIST_PAYMENTS) || [];
 
-      if (!paymentsExistIds || paymentsExistIds.length === 0) {
+      if (!paymentsExistIds.length) {
         console.log('Get payments exist database');
         const paymentsExist = await Payment.find({ transactionId: { $in: listIds } }).select('transactionId');
         paymentsExistIds = paymentsExist.map((payment) => payment.transactionId);
-        cacheService.set(KEY_LIST_PAYMENTS, paymentsExistIds, getRandomNumber(50, 75));
+        cacheService.set(KEY_LIST_PAYMENTS, paymentsExistIds, TIME_CACHE_LIST_PAYMENTS);
       }
 
       const newIdsTransaction = findDifferentElements(listIds, paymentsExistIds);
@@ -197,18 +233,29 @@ const getTransactionHistory = async () => {
 
       console.log('Total balance:', transactionInfos[0].runningBalance);
 
-      if (newTransactionRaw.length > 0) {
+      if (newTransactionRaw.length) {
         for (const newTransaction of newTransactionRaw) {
+          const { amount, description, runningBalance } = newTransaction;
+
           await Payment.create({
             transactionId: newTransaction.id,
-            description: newTransaction.description,
-            amount: newTransaction.amount,
-            runningBalance: newTransaction.runningBalance,
+            amount,
+            description,
+            runningBalance,
           });
+
+          const username = extractDynamicValue(description);
+          const user = await User.findOne({ username });
+          if (user) {
+            user.accountBalance += +amount;
+            await user.save();
+          }
         }
         console.log('Old transaction: ', paymentsExistIds);
-        cacheService.set(KEY_LIST_PAYMENTS, [...paymentsExistIds, ...newIdsTransaction], getRandomNumber(50, 75));
+
+        cacheService.set(KEY_LIST_PAYMENTS, [...paymentsExistIds, ...newIdsTransaction], TIME_CACHE_LIST_PAYMENTS);
         const newTransaction = cacheService.get(KEY_LIST_PAYMENTS) || [];
+
         console.log('New transaction: ', newTransaction);
       }
 

@@ -7,6 +7,7 @@ const env = {
   accountNo: process.env.ACCOUNT_NO,
   usernameHash: process.env.USERNAME_HASH,
   passwordHash: process.env.PASSWORD_HASH,
+  transactionHistoryInterVal: process.env.TRANSACTION_HISTORY_INTERVAL,
 };
 
 module.exports = env;
