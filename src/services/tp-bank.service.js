@@ -3,8 +3,14 @@ const axios = require('axios');
 const { Order, Payment } = require('../models');
 const cacheService = require('./cache.service');
 const cryptoService = require('./crypto.service');
-const { usernameHash, passwordHash } = require('../config');
-const { KEY_TOTAL_BALANCE, KEY_ACCESS_TOKEN, ONE_DAY_IN_SECONDS, DATE_NUMBER_DIFFERENCE } = require('../constants');
+const { usernameHash, passwordHash, accountNo } = require('../config');
+const {
+  KEY_TOTAL_BALANCE,
+  KEY_ACCESS_TOKEN,
+  ONE_DAY_IN_SECONDS,
+  DATE_NUMBER_DIFFERENCE,
+  KEY_LIST_PAYMENTS,
+} = require('../constants');
 
 const username = cryptoService.decrypt(usernameHash);
 const password = cryptoService.decrypt(passwordHash);
@@ -125,7 +131,7 @@ const getTransactionHistory = async () => {
   const data = JSON.stringify({
     pageNumber: 1,
     pageSize: 400,
-    accountNo: '00005572823',
+    accountNo,
     currency: 'VND',
     maxAcentrysrno: '',
     toDate,
@@ -144,13 +150,13 @@ const getTransactionHistory = async () => {
       Authorization: `Bearer  ${accessToken}`,
       Connection: 'keep-alive',
       'Content-Type': 'application/json',
-      DEVICE_ID: 'VAfU3uJVRqt1xWjsFRQ2S2NOkjrTC5AV3D2qdywFSPmBz',
+      DEVICE_ID: deviceId,
       DEVICE_NAME: 'Chrome',
       DNT: '1',
       Origin: 'https://ebank.tpb.vn',
       PLATFORM_NAME: 'WEB',
       PLATFORM_VERSION: '124',
-      Referer: 'https://ebank.tpb.vn/retail/vX/main/inquiry/account/transaction?id=00005572823',
+      Referer: `https://ebank.tpb.vn/retail/vX/main/inquiry/account/transaction?id=${accountNo}`,
       SOURCE_APP: 'HYDRO',
       'Sec-Fetch-Dest': 'empty',
       'Sec-Fetch-Mode': 'cors',
@@ -174,9 +180,14 @@ const getTransactionHistory = async () => {
 
       const listIds = transactionInfos.map((transactionInfo) => transactionInfo.id);
 
-      const paymentsExist = await Payment.find({ transactionId: { $in: listIds } });
+      let paymentsExistIds = cacheService.get(KEY_LIST_PAYMENTS) || [];
 
-      const paymentsExistIds = paymentsExist.map((payment) => payment.transactionId);
+      if (!paymentsExistIds || paymentsExistIds.length === 0) {
+        console.log('Get payments exist database');
+        const paymentsExist = await Payment.find({ transactionId: { $in: listIds } }).select('transactionId');
+        paymentsExistIds = paymentsExist.map((payment) => payment.transactionId);
+        cacheService.set(KEY_LIST_PAYMENTS, paymentsExistIds, getRandomNumber(50, 75));
+      }
 
       const newIdsTransaction = findDifferentElements(listIds, paymentsExistIds);
 
@@ -184,13 +195,21 @@ const getTransactionHistory = async () => {
         newIdsTransaction.includes(transactionInfo.id),
       );
 
-      for (const newTransaction of newTransactionRaw) {
-        await Payment.create({
-          transactionId: newTransaction.id,
-          description: newTransaction.description,
-          amount: newTransaction.amount,
-          runningBalance: newTransaction.runningBalance,
-        });
+      console.log('Total balance:', transactionInfos[0].runningBalance);
+
+      if (newTransactionRaw.length > 0) {
+        for (const newTransaction of newTransactionRaw) {
+          await Payment.create({
+            transactionId: newTransaction.id,
+            description: newTransaction.description,
+            amount: newTransaction.amount,
+            runningBalance: newTransaction.runningBalance,
+          });
+        }
+        console.log('Old transaction: ', paymentsExistIds);
+        cacheService.set(KEY_LIST_PAYMENTS, [...paymentsExistIds, ...newIdsTransaction], getRandomNumber(50, 75));
+        const newTransaction = cacheService.get(KEY_LIST_PAYMENTS) || [];
+        console.log('New transaction: ', newTransaction);
       }
 
       return newTransactionRaw;
