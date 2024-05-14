@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: haui-food-cron-job
+    container_name: haui-food-payment
     working_dir: /server
     ports:
       - '8668:8668'
