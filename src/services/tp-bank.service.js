@@ -72,16 +72,30 @@ const getTotalBalanceOld = async () => {
 const extractDynamicValue = (desc) => {
   const extractionRules = [
     {
+      bank: 'Agribank',
       condition: (str) => str.includes(';'),
       extractor: (str) => str.split(';')[2],
     },
     {
+      bank: 'MBBank',
       condition: (str) => str.includes('Thanh toan QR'),
       extractor: (str) => str.split(' ')[3],
     },
     {
+      bank: 'Vietcombank',
       condition: (str) => str.includes('MBVCB'),
       extractor: (str) => str.split('.')[3],
+    },
+    {
+      bank: 'Techcombank',
+      condition: (str) => {
+        const parts = str.split(' ');
+        return parts[parts.length - 1].includes('FT');
+      },
+      extractor: (str) => {
+        const parts = str.split(' ');
+        return parts.slice(0, -1).join(' ');
+      },
     },
   ];
 
