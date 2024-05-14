@@ -79,7 +79,7 @@ const extractDynamicValue = (desc) => {
     {
       bank: 'MBBank',
       condition: (str) => str.includes('Thanh toan QR'),
-      extractor: (str) => str.split(' ')[3],
+      extractor: (str) => str.split(' ').slice(3).join(' '),
     },
     {
       bank: 'Vietcombank',
@@ -92,10 +92,7 @@ const extractDynamicValue = (desc) => {
         const parts = str.split(' ');
         return parts[parts.length - 1].includes('FT');
       },
-      extractor: (str) => {
-        const parts = str.split(' ');
-        return parts.slice(0, -1).join(' ');
-      },
+      extractor: (str) => str.split(' ').slice(0, -1).join(' '),
     },
   ];
 
