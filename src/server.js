@@ -11,7 +11,9 @@ const time = env.transactionHistoryInterVal;
 
 const scheduledTasks = [{ task: TBBankService.getTransactionHistory, schedule: `*/${time} * * * * *` }];
 
-mongoose.set('debug', true);
+if (env.nodeEnv === 'development') {
+  mongoose.set('debug', true);
+}
 
 app.all('*', (req, res) => {
   res.send('Service payment is running 🌱');
