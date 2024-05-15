@@ -1,7 +1,7 @@
 const axios = require('axios');
 
+const userService = require('./user.service');
 const cacheService = require('./cache.service');
-const userService = require('./payment.service');
 const cryptoService = require('./crypto.service');
 const paymentService = require('./payment.service');
 const { usernameHash, passwordHash, accountNo } = require('../config');
