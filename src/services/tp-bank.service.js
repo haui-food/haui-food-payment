@@ -161,7 +161,7 @@ const getTransactionHistory = async () => {
           await paymentService.createNew(newPayment);
 
           const username = extractDynamicValue(description);
-          userService.updateBalanceByUsername(username, amount);
+          userService.updateBalanceByUsername(username, +amount);
         }
         console.log('Old transaction: ', paymentsExistIds);
 
