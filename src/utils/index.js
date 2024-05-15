@@ -53,6 +53,11 @@ const extractDynamicValue = (desc) => {
       extractor: (str) => str.split('.')[3],
     },
     {
+      bank: 'Vietinbank',
+      condition: (str) => str.includes('QR - '),
+      extractor: (str) => str.replace('QR - ', ''),
+    },
+    {
       bank: 'Techcombank',
       condition: (str) => {
         const parts = str.split(' ');
