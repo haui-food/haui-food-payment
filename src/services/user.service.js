@@ -4,11 +4,11 @@ const getByUsername = async (username) => {
   return await User.findOne({ username });
 };
 
-const updateBalanceByUsername = async (username, balance) => {
+const updateBalanceByUsername = async (username, amount) => {
   const user = await getByUsername(username);
 
   if (user) {
-    user.accountBalance = balance;
+    user.accountBalance += amount;
     await user.save();
   }
 };
