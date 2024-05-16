@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+const env = require('../config');
 const userService = require('./user.service');
 const cacheService = require('./cache.service');
 const cryptoService = require('./crypto.service');
@@ -160,12 +161,18 @@ const getTransactionHistory = async () => {
 
           await paymentService.createNew(newPayment);
 
-          const username = extractDynamicValue(description);
-          userService.updateBalanceByUsername(username, +amount);
+          if (amount >= env.minAmount) {
+            const username = extractDynamicValue(description);
+            userService.updateBalanceByUsername(username, +amount);
+          }
         }
         console.log('Old transaction: ', paymentsExistIds);
 
-        cacheService.set(KEY_LIST_PAYMENTS, [...paymentsExistIds, ...newIdsTransaction], TIME_CACHE_LIST_PAYMENTS);
+        cacheService.set(
+          KEY_LIST_PAYMENTS,
+          new Set([...paymentsExistIds, ...newIdsTransaction]),
+          TIME_CACHE_LIST_PAYMENTS,
+        );
         const newTransaction = cacheService.get(KEY_LIST_PAYMENTS) || [];
 
         console.log('New transaction: ', newTransaction);
