@@ -1,6 +1,7 @@
 const axios = require('axios');
 
 const env = require('../config');
+const apiService = require('./api.service');
 const userService = require('./user.service');
 const cacheService = require('./cache.service');
 const cryptoService = require('./crypto.service');
@@ -161,10 +162,20 @@ const getTransactionHistory = async () => {
 
           await paymentService.createNew(newPayment);
 
-          if (amount >= env.minAmount) {
-            const username = extractDynamicValue(description);
-            userService.updateBalanceByUsername(username, +amount);
+          let dataSend = { desc, status: 'SUCCESS', amount, balance: runningBalance };
+          const desc = extractDynamicValue(description);
+
+          const isRecharge = checkPaymentType(description);
+
+          if (isRecharge) {
+            if (amount >= env.minAmount) {
+              userService.updateBalanceByUsername(desc, +amount);
+            }
           }
+
+          dataSend = { ...dataSend, method: isRecharge ? 'recharge' : 'payment' };
+
+          await apiService.sendMessage(dataSend);
         }
         console.log('Old transaction: ', paymentsExistIds);
 
@@ -186,6 +197,11 @@ const getTransactionHistory = async () => {
     console.log(error.response.data);
     return null;
   }
+};
+
+const checkPaymentType = (description) => {
+  const isRecharge = description.includes('hauifood');
+  return isRecharge;
 };
 
 module.exports = {
