@@ -11,9 +11,15 @@ const getTotalBalanceOld = async () => {
 };
 
 const getListTransactionIds = async () => {
-  const transactionIds = await Payment.distinct('transactionId');
+  const payments = await Payment.find({
+    createdAt: { $gte: new Date(Date.now() - 36 * 60 * 60 * 1000) },
+  }).sort({ createdAt: -1 });
 
-  return transactionIds;
+  const paymentsIds = payments.map((payment) => payment.transactionId);
+
+  const paymentIdsUnique = [...new Set(paymentsIds)];
+
+  return paymentIdsUnique;
 };
 
 const createNew = async (createBody) => {

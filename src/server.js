@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const env = require('./config');
+const uri = require('./config/mongo.config');
 const { TBBankService } = require('./services');
 
 const app = express();
@@ -20,7 +21,7 @@ app.all('*', (req, res) => {
 });
 
 mongoose
-  .connect(env.mongoURI)
+  .connect(uri)
   .then(() => {
     console.log('Connected to database');
   })

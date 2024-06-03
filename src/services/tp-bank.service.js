@@ -19,6 +19,7 @@ const userService = require('./user.service');
 const cacheService = require('./cache.service');
 const cryptoService = require('./crypto.service');
 const paymentService = require('./payment.service');
+const telegramService = require('./telegram.service');
 const { usernameHash, passwordHash, accountNo } = require('../config');
 
 const username = cryptoService.decrypt(usernameHash);
@@ -73,8 +74,9 @@ const loginTPBank = async () => {
     console.log('Login');
     const response = await axios(config);
     const { status, data } = response;
-
     if (status === 200) {
+      await telegramService.sendMessage('Login successfully');
+
       const accessToken = data.access_token;
 
       const ttlCacheTokenRandom = getRandomNumber(50, 75);
@@ -160,17 +162,16 @@ const getTransactionHistory = async () => {
 
           const desc = extractDynamicValue(description);
 
-          let dataSend = { desc, amount };
-
           const isRecharge = desc.includes('hauifood');
 
-          if (isRecharge && amount > env.minAmount) {
+          if (isRecharge && amount >= env.minAmount) {
             await userService.updateBalanceByUsername(desc, +amount);
           }
 
-          dataSend = { ...dataSend, method: isRecharge ? 'recharge' : 'payment' };
+          const dataSend = { desc, amount, method: isRecharge ? 'recharge' : 'payment' };
 
-          apiService.sendMessage(dataSend);
+          await apiService.sendMessage(dataSend);
+          await telegramService.sendMessage(JSON.stringify(dataSend));
 
           cacheService.set(
             KEY_LIST_PAYMENTS,
@@ -181,6 +182,7 @@ const getTransactionHistory = async () => {
       }
     }
   } catch (error) {
+    await telegramService.sendMessage(JSON.stringify(error.response.data));
     console.log(error.response.data);
   }
 };
